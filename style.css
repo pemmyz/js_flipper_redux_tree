@@ -1,0 +1,212 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #1a1a1a;
+    color: #fff;
+    font-family: 'Courier New', Courier, monospace;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+    transition: background-color 0.3s ease;
+}
+
+#game-container {
+    position: relative;
+    width: 600px;
+    height: 800px;
+    background-color: #000;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    overflow: visible; 
+}
+
+#canvas-wrapper {
+    width: 100%;
+    height: 100%; /* Fills remaining height after header */
+    flex-grow: 1;
+    overflow: hidden;
+    background: #000;
+}
+
+canvas {
+    display: block;
+    outline: none;
+}
+
+#ui-panel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.6) 80%, rgba(0,0,0,0) 100%);
+    pointer-events: none; /* Let clicks pass through to canvas if needed */
+}
+
+/* Re-enable pointer events for buttons inside the UI panel */
+#ui-panel button, #ui-panel .ui-box {
+    pointer-events: auto;
+}
+
+.ui-box {
+    text-align: center;
+    width: 120px;
+}
+
+.ui-box h2 {
+    font-size: 0.9em;
+    color: #00d2ff;
+    text-shadow: 0 0 5px #00d2ff;
+}
+
+.ui-box p {
+    font-size: 1.5em;
+    color: #ffffff;
+    font-weight: bold;
+    text-shadow: 0 0 5px #ffffff;
+}
+
+#game-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.ui-control-button {
+    padding: 4px 10px;
+    font-size: 0.7em;
+    font-family: 'Courier New', Courier, monospace;
+    background-color: rgba(50, 50, 50, 0.8);
+    color: #ddd;
+    border: 1px solid #666;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100px;
+    text-transform: uppercase;
+}
+
+.ui-control-button:hover {
+    background-color: #00d2ff;
+    color: #000;
+    border-color: #fff;
+    box-shadow: 0 0 10px #00d2ff;
+}
+
+#theme-toggle-button {
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    z-index: 50;
+    padding: 8px 15px;
+    background-color: #333;
+    color: #fff;
+    border: 1px solid #555;
+    cursor: pointer;
+}
+
+#game-over-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 20;
+}
+
+#game-over-screen h1 {
+    font-size: 3.5em;
+    color: #ff0055;
+    text-shadow: 0 0 15px #ff0055;
+    margin-bottom: 20px;
+}
+
+#restart-button, #close-help-button {
+    padding: 15px 30px;
+    font-size: 1.2em;
+    font-family: 'Courier New', Courier, monospace;
+    background-color: #00d2ff;
+    color: #000;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 0 15px #00d2ff;
+    font-weight: bold;
+}
+
+#restart-button:hover, #close-help-button:hover {
+    background-color: #fff;
+    box-shadow: 0 0 25px #fff;
+}
+
+.hidden { display: none !important; }
+
+#help-legend {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 85%;
+    max-width: 500px;
+    background-color: rgba(20, 20, 20, 0.95);
+    border: 2px solid #00d2ff;
+    box-shadow: 0 0 20px rgba(0, 210, 255, 0.4);
+    padding: 30px;
+    z-index: 30;
+    color: #fff;
+}
+
+#help-legend h2 {
+    text-align: center;
+    color: #00d2ff;
+    margin-bottom: 20px;
+}
+
+#help-legend span {
+    color: #ff0055;
+    font-weight: bold;
+}
+
+.touch-button {
+    position: absolute;
+    width: 70px;
+    height: 70px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    z-index: 100;
+    cursor: pointer;
+    color: white;
+    font-size: 2em;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    user-select: none;
+    backdrop-filter: blur(2px);
+}
+.touch-button:active { background-color: rgba(0, 210, 255, 0.4); border-color: #00d2ff; }
+
+#touch-left { left: -85px; bottom: 20px; }
+#touch-right { right: -85px; bottom: 20px; }
+#touch-launch { right: -85px; bottom: 100px; }
+
+/* Light Mode Styles */
+body.light-mode { background-color: #e0e0e0; color: #111; }
+body.light-mode #game-container { background-color: #fff; box-shadow: 0 0 20px rgba(0,0,0,0.2); }
+body.light-mode #ui-panel { background: rgba(255,255,255,0.9); border-bottom: 1px solid #ccc; }
+body.light-mode .ui-box h2 { color: #005588; text-shadow: none; }
+body.light-mode .ui-box p { color: #333; text-shadow: none; }

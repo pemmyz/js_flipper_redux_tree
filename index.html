@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>3D Physics Pinball</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Planck.js Physics Engine -->
+    <script src="https://cdn.jsdelivr.net/npm/planck-js@latest/dist/planck.min.js"></script>
+    <!-- Three.js 3D Engine -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <button id="theme-toggle-button">Light Mode</button>
+
+    <div id="game-container">
+        <div id="ui-panel">
+            <div class="ui-box">
+                <h2>SCORE</h2>
+                <p id="score">0</p>
+            </div>
+            <div id="game-controls">
+                <button id="mute-button" class="ui-control-button">Mute</button>
+                <button id="gap-button" class="ui-control-button">Widen Gap</button>
+                <button id="help-toggle-button" class="ui-control-button">Help</button>
+            </div>
+            <div class="ui-box">
+                <h2>BALLS LEFT</h2>
+                <p id="attempts">3</p>
+            </div>
+        </div>
+        
+        <!-- The Canvas is now managed by Three.js inside script.js, but we keep a wrapper -->
+        <div id="canvas-wrapper"></div>
+
+        <!-- Touch Controls -->
+        <button id="touch-left" class="touch-button" aria-label="Left Flipper">⇦</button>
+        <button id="touch-right" class="touch-button" aria-label="Right Flipper">⇨</button>
+        <button id="touch-launch" class="touch-button" aria-label="Launch Ball">⇑</button>
+        
+        <div id="help-legend" class="hidden">
+            <h2>CONTROLS</h2>
+            <p><span>Left Arrow / ⇦:</span> Left Flipper</p>
+            <p><span>Right Arrow / ⇨:</span> Right Flipper</p>
+            <p><span>Spacebar / ⇑:</span> Hold to Charge, Release to Launch</p>
+            <p><span>H / Help Button:</span> Toggle this Help Screen</p>
+            <p><span>M / Mute Button:</span> Toggle Sound</p>
+            <p><span>G / Gap Button:</span> Widen Flipper Gap</p>
+            <p><span>B:</span> Toggle Bot Mode</p>
+            <p id="bot-status-text" style="text-align:center; margin-top:15px; font-weight: bold;"></p>
+            <button id="close-help-button">Close</button>
+        </div>
+
+        <div id="game-over-screen" class="hidden">
+            <h1>GAME OVER</h1>
+            <p>Final Score: <span id="final-score">0</span></p>
+            <button id="restart-button">Play Again</button>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
