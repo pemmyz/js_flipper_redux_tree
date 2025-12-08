@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const CONFIG = {
         pixelsPerMeter: 30, // Physics scale
         canvasWidth: 600,
-        canvasHeight: 800,
+        canvasHeight: 1000, // Changed from 800
         gravity: 15,
         colors: {
             floor: 0x222222,
@@ -38,7 +38,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const midX = (CONFIG.canvasWidth / CONFIG.pixelsPerMeter) / 2;
     const midZ = (CONFIG.canvasHeight / CONFIG.pixelsPerMeter) / 2;
     
-    camera.position.set(midX, 25, midZ + 15); 
+    camera.position.set(midX, 45, midZ + 30); // Moved camera higher (Y=45) and further back (Z+30) to fit 1000px height
+
     camera.lookAt(midX, 0, midZ); // Look at center of board
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
