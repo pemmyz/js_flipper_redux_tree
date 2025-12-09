@@ -19,7 +19,7 @@ body {
 #game-container {
     position: relative;
     width: 600px;
-    height: 1000px; /* Changed from 800px */
+    height: 1000px;
     background-color: #000;
     box-shadow: 0 0 20px rgba(0,0,0,0.5);
     display: flex;
@@ -29,7 +29,7 @@ body {
 
 #canvas-wrapper {
     width: 100%;
-    height: 100%; /* Fills remaining height after header */
+    height: 100%;
     flex-grow: 1;
     overflow: hidden;
     background: #000;
@@ -51,10 +51,9 @@ canvas {
     align-items: center;
     padding: 10px 20px;
     background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.6) 80%, rgba(0,0,0,0) 100%);
-    pointer-events: none; /* Let clicks pass through to canvas if needed */
+    pointer-events: none;
 }
 
-/* Re-enable pointer events for buttons inside the UI panel */
 #ui-panel button, #ui-panel .ui-box {
     pointer-events: auto;
 }

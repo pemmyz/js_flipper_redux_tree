@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const CONFIG = {
         pixelsPerMeter: 30, // Physics scale
         canvasWidth: 600,
-        canvasHeight: 1000, // Changed from 800
+        canvasHeight: 1000,
         gravity: 15,
         colors: {
             floor: 0x222222,
@@ -26,21 +26,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const scene = new THREE.Scene();
     
     // Camera Setup for 2.5D View
-    // We map physics width (approx 20 meters) to camera view
     const aspect = CONFIG.canvasWidth / CONFIG.canvasHeight;
     const viewSize = 30; // Vertical field of view in world units
     const camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 1000);
     
-    // Position camera: Center X, Above Y, Back Z
-    // Physics center is approx (10, 13). 
-    // In 3D: X=Horizontal, Y=Vertical(Height), Z=Depth(Physics Y)
-    // Actually, let's map: Physics X -> 3D X, Physics Y -> 3D Z. 3D Y is "Up".
     const midX = (CONFIG.canvasWidth / CONFIG.pixelsPerMeter) / 2;
     const midZ = (CONFIG.canvasHeight / CONFIG.pixelsPerMeter) / 2;
     
-    camera.position.set(midX, 45, midZ + 30); // Moved camera higher (Y=45) and further back (Z+30) to fit 1000px height
-
-    camera.lookAt(midX, 0, midZ); // Look at center of board
+    camera.position.set(midX, 45, midZ + 30); 
+    camera.lookAt(midX, 0, midZ);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(CONFIG.canvasWidth, CONFIG.canvasHeight);
@@ -65,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
     dirLight.shadow.camera.bottom = -15;
     scene.add(dirLight);
 
-    // Spotlight for dramatic effect on the launcher area
+    // Spotlight
     const spotLight = new THREE.SpotLight(0xff0055, 0.5);
     spotLight.position.set(midX + 5, 10, midZ + 10);
     spotLight.lookAt(midX + 5, 0, midZ + 10);
@@ -168,11 +162,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function cleanupScene() {
-        // Remove all meshes that are dynamic or part of the playfield
         for (let i = scene.children.length - 1; i >= 0; i--) {
             const child = scene.children[i];
             if (child.isMesh || child.isGroup) {
-                // Keep lights, remove objects
                 scene.remove(child);
             }
         }
@@ -189,7 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         const floor = new THREE.Mesh(floorGeo, floorMat);
         floor.rotation.x = -Math.PI / 2;
-        floor.position.set(midX, -0.5, midZ); // Slightly below 0
+        floor.position.set(midX, -0.5, midZ);
         floor.receiveShadow = true;
         scene.add(floor);
     }
@@ -201,7 +193,6 @@ document.addEventListener('DOMContentLoaded', () => {
         gameState = 'launch';
         showHelp = false;
         botModeActive = false;
-        // Reset timers
         clearTimeout(botActivationTimer); clearInterval(botCountdownInterval); clearTimeout(botLaunchTimerId);
         botLaunchTimerId = null;
         startBotCountdown();
@@ -215,9 +206,9 @@ document.addEventListener('DOMContentLoaded', () => {
         world = pl.World({ gravity: Vec2(0, CONFIG.gravity) });
 
         createLauncher();
-        createFieldBoundaries(); // Walls
-        createBumperLayout();    // Obstacles
-        createComplexFeatures(); // New 3D stuff
+        createFieldBoundaries();
+        createBumperLayout();
+        createComplexFeatures();
         createPhysicsFlippers();
         setupContactListener();
 
@@ -228,23 +219,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Physics & 3D Objects ---
 
     function createFieldBoundaries() {
-        const wallThickness = 1; // Meters
-        const wallHeight = 2;    // Meters 3D
-        const bodies = [];
-
-        // 3D Geometry for walls
+        const wallHeight = 2;
         const wallMat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.wall, emissive: 0x0044aa, emissiveIntensity: 0.2 });
 
-        // Helper to add wall
         function addWall(x, y, w, h) {
-            // Physics
             const body = world.createBody(Vec2(x, y));
             body.createFixture(pl.Box(w/2, h/2));
             
-            // 3D
             const geo = new THREE.BoxGeometry(w, wallHeight, h);
             const mesh = new THREE.Mesh(geo, wallMat);
-            mesh.position.set(x, wallHeight/2, y); // y is z in 3D logic here for position, but y is up
+            mesh.position.set(x, wallHeight/2, y);
             mesh.castShadow = true; mesh.receiveShadow = true;
             scene.add(mesh);
         }
@@ -262,14 +246,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const sepY = px2m(100) + sepH/2;
         addWall(sepX, sepY, 0.2, sepH);
 
-        // Guide Ramp (Curved top right)
-        // Approximated by static segments for simplicity in 3D sync
+        // Guide Ramp
         const rampBody = world.createBody();
         const p1 = Vec2(px2m(CONFIG.canvasWidth), px2m(80));
         const p2 = Vec2(px2m(PLAYFIELD_WIDTH_PX - 40), 0);
         rampBody.createFixture(pl.Edge(p1, p2), { restitution: 0.2 });
         
-        // 3D Visual for Ramp (A thin box rotated)
         const rampLen = Vec2.distance(p1, p2);
         const rampCenter = Vec2.mid(p1, p2);
         const rampAngle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
@@ -289,12 +271,18 @@ document.addEventListener('DOMContentLoaded', () => {
     function createComplexFeatures() {
         // 1. Spinning Cross in the center
         const spinnerX = px2m(PLAYFIELD_WIDTH_PX / 2);
-        const spinnerY = px2m(300);
+        // Move down by its width (1.5 * 2 = 3.0 meters)
+        const spinnerY = px2m(300) + 3.0; 
         
-        const spinnerBody = world.createDynamicBody(Vec2(spinnerX, spinnerY));
-        spinnerBody.createFixture(pl.Box(1.5, 0.2), { density: 50, restitution: 1.2 });
-        spinnerBody.createFixture(pl.Box(0.2, 1.5), { density: 50, restitution: 1.2 });
-        spinnerBody.setAngularVelocity(2);
+        // Enable angular damping so it slows down, remove initial angular velocity
+        const spinnerBody = world.createDynamicBody({
+            position: Vec2(spinnerX, spinnerY),
+            angularDamping: 0.3
+        });
+
+        // Reduced density (50 -> 2) so ball collision transfers enough energy to spin it
+        spinnerBody.createFixture(pl.Box(1.5, 0.2), { density: 2.0, restitution: 1.2 });
+        spinnerBody.createFixture(pl.Box(0.2, 1.5), { density: 2.0, restitution: 1.2 });
         spinnerBody.setUserData({ type: 'bumper', points: 100 });
 
         // 3D Visual
@@ -309,17 +297,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // Joint to hold it in place but let it spin
         const anchor = world.createBody(Vec2(spinnerX, spinnerY));
         world.createJoint(pl.RevoluteJoint({
-            motorSpeed: 2,
-            maxMotorTorque: 100,
-            enableMotor: true
+            enableMotor: false, // Disable motor for free spinning on physics hit
+            enableLimit: false
         }, anchor, spinnerBody, Vec2(spinnerX, spinnerY)));
 
         syncableObjects.push({ body: spinnerBody, mesh: spinnerGroup, type: 'spinner' });
 
-        // 2. Triangle Prisms (Static)
+        // 2. Triangle Prisms
         function createPrism(x, y) {
             const body = world.createBody(Vec2(x, y));
-            // Triangle shape
             body.createFixture(pl.Polygon([Vec2(0, -0.8), Vec2(0.7, 0.5), Vec2(-0.7, 0.5)]), { restitution: 1.5 });
             body.setUserData({ type: 'bumper', points: 50 });
 
@@ -332,9 +318,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
             const mat = new THREE.MeshStandardMaterial({ color: 0xaa00ff, emissive: 0x4400aa });
             const mesh = new THREE.Mesh(geo, mat);
-            // Extrudes along Z, rotate to lie flat
             mesh.rotation.x = Math.PI / 2;
-            mesh.position.set(x, 0.25, y); // Adjust for rotation center
+            mesh.position.set(x, 0.25, y); 
             scene.add(mesh);
         }
         
@@ -356,12 +341,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const xM = px2m(b.x);
             const yM = px2m(b.y);
 
-            // Physics
             const body = world.createBody(Vec2(xM, yM));
             body.createFixture(pl.Circle(rM), { restitution: 1.3 });
             body.setUserData({ type: 'bumper', points: 50 });
 
-            // 3D
             const mesh = new THREE.Mesh(bumperGeo, new THREE.MeshStandardMaterial({ 
                 color: CONFIG.colors.bumper, 
                 emissive: 0xffaa00,
@@ -371,7 +354,6 @@ document.addEventListener('DOMContentLoaded', () => {
             mesh.position.set(xM, 0.25, yM);
             mesh.castShadow = true;
             
-            // Add a point light to each bumper for "glow"
             const light = new THREE.PointLight(CONFIG.colors.bumper, 0.5, 5);
             light.position.set(0, 1, 0);
             mesh.add(light);
@@ -381,7 +363,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function createPhysicsFlippers() {
-        // Destroy old if exists
         if(leftFlipper.mesh) { scene.remove(leftFlipper.mesh); world.destroyBody(leftFlipper.body); }
         if(rightFlipper.mesh) { scene.remove(rightFlipper.mesh); world.destroyBody(rightFlipper.body); }
         
@@ -389,7 +370,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const flipperWidth = 15;
         const flipperY = CONFIG.canvasHeight - 60;
         
-        // Calculate gap
         const flipperRestAngle = Math.PI / 8;
         const flipperTotalSpan = (2 * flipperLength * Math.cos(flipperRestAngle)) + flipperGapBetweenTips;
         const leftX = (PLAYFIELD_WIDTH_PX - flipperTotalSpan) / 2;
@@ -398,7 +378,6 @@ document.addEventListener('DOMContentLoaded', () => {
         leftFlipper = createOneFlipper(leftX, flipperY, flipperLength, flipperWidth, false);
         rightFlipper = createOneFlipper(rightX, flipperY, flipperLength, flipperWidth, true);
 
-        // Slopes leading to flippers
         createSlopes(leftX, rightX, flipperY);
     }
 
@@ -411,13 +390,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const anchor = world.createBody(Vec2(pX, pY));
         const body = world.createDynamicBody(Vec2(pX, pY));
         
-        // Visual offset logic: Flipper rotates around one end
-        // Box center is (0,0), so offset shape center
         const shapeOffset = isRight ? -pLen/2 : pLen/2;
         body.createFixture(pl.Box(pLen/2, pW/2, Vec2(shapeOffset, 0)), { density: 1.0 });
         body.setUserData({ type: 'flipper' });
 
-        // Motor Joint
         const restAngle = isRight ? -Math.PI/8 : Math.PI/8;
         const swing = Math.PI/3.5;
         const lower = isRight ? restAngle : restAngle - swing;
@@ -428,15 +404,13 @@ document.addEventListener('DOMContentLoaded', () => {
             enableMotor: true, maxMotorTorque: 1000, motorSpeed: 0
         }, anchor, body, Vec2(pX, pY)));
 
-        // 3D Mesh
         const meshGroup = new THREE.Group();
         const geo = new THREE.BoxGeometry(pLen, 0.6, pW);
         const mat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.flipper });
         const mesh = new THREE.Mesh(geo, mat);
         
-        // Offset mesh inside group to match physics offset
         mesh.position.x = shapeOffset; 
-        mesh.position.y = 0.3; // Half height
+        mesh.position.y = 0.3;
         
         meshGroup.add(mesh);
         meshGroup.position.set(pX, 0, pY);
@@ -446,7 +420,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function createSlopes(lx, rx, fy) {
-        // Just visual/physics walls to guide ball to flipper
         const startY = px2m(CONFIG.canvasHeight * 0.6);
         const endY = px2m(fy);
         const lEndX = px2m(lx);
@@ -456,7 +429,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const body = world.createBody();
             body.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)));
             
-            // 3D Visual
             const len = Math.sqrt((x2-x1)**2 + (y2-y1)**2);
             const ang = Math.atan2(y2-y1, x2-x1);
             const midX = (x1+x2)/2;
@@ -483,7 +455,6 @@ document.addEventListener('DOMContentLoaded', () => {
             baseY: px2m(CONFIG.canvasHeight - 30)
         };
         
-        // Plunger visual
         const geo = new THREE.BoxGeometry(px2m(20), 0.5, px2m(50));
         const mat = new THREE.MeshStandardMaterial({ color: 0x888888 });
         launcher.mesh = new THREE.Mesh(geo, mat);
@@ -504,7 +475,6 @@ document.addEventListener('DOMContentLoaded', () => {
         body.createFixture(pl.Circle(r), { density: 1.0, restitution: 0.5 });
         body.setUserData({ type: 'ball', state: 'ready' });
 
-        // 3D Ball
         const geo = new THREE.SphereGeometry(r, 32, 32);
         const mat = new THREE.MeshStandardMaterial({ 
             color: CONFIG.colors.ball, 
@@ -539,7 +509,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const dA = getData(contact.getFixtureA());
             const dB = getData(contact.getFixtureB());
             
-            // Identify if one is a ball
             let ballData = dA.type === 'ball' ? dA : (dB.type === 'ball' ? dB : null);
             let otherData = dA.type === 'ball' ? dB : dA;
             let ballBody = dA.type === 'ball' ? contact.getFixtureA().getBody() : contact.getFixtureB().getBody();
@@ -551,8 +520,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 score += otherData.points || 10;
                 playSound('bounce');
                 updateUI();
-                
-                // Visual Hit Effect? (Could change color temporarily)
             } else if (otherData.type === 'flipper') {
                 playSound('flipper');
             } else if (otherData.type === 'drain') {
@@ -567,14 +534,8 @@ document.addEventListener('DOMContentLoaded', () => {
         requestAnimationFrame(animate);
 
         if (gameState !== 'gameOver') {
-            // 1. Physics Step
-            // Fixed time step for physics consistency
             world.step(1/60, 8, 3);
-            
-            // 2. Game Logic
             updateGameLogic();
-
-            // 3. Sync Physics to 3D
             syncPhysicsToGraphics();
         }
         
@@ -582,38 +543,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateGameLogic() {
-        // Bot Logic
         if (botModeActive && !showHelp) {
             runBotLogic();
         }
 
-        // Flipper Motor Control
         const speed = 25; 
         leftFlipper.joint.setMotorSpeed(leftFlipper.active ? -speed : speed);
         rightFlipper.joint.setMotorSpeed(rightFlipper.active ? speed : -speed);
 
-        // Launcher Charging
         if (gameState === 'launch') {
             const ballObj = syncableObjects.find(o => o.type === 'ball' && o.body.getUserData().state === 'ready');
             if (launcher.charging && launcher.power < launcher.maxPower) {
                 launcher.power += 1.0;
             }
-            // Move ball visually with plunger
             if (ballObj) {
                 const offset = launcher.power / CONFIG.pixelsPerMeter / 4; 
-                ballObj.body.setPosition(Vec2(launcher.x, launcher.baseY + offset)); // Plunger pushes up, but physics Y is down? 
-                // Wait, impulse is (0, -power). Negative Y is UP in Planck visual logic usually, but here Y increases downwards.
-                // Impulse -power pushes UP (towards 0). 
-                // Plunger visual should retract (go down/positive Y) to charge.
-                const visualY = launcher.baseY + (launcher.power / 500); // Slight movement
-                // Simplified: just update mesh based on body which is static until launch
+                ballObj.body.setPosition(Vec2(launcher.x, launcher.baseY + offset));
             }
-            
-            // Update plunger mesh position
             launcher.mesh.position.z = launcher.baseY + (launcher.power / CONFIG.pixelsPerMeter / 2);
         }
 
-        // Remove Balls
         if (ballsToRemove.length > 0) {
             ballsToRemove.forEach(b => {
                 const idx = syncableObjects.findIndex(o => o.body === b);
@@ -625,7 +574,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             ballsToRemove = [];
             
-            // Check Game Over
             const activeBalls = syncableObjects.filter(o => o.type === 'ball' && o.body.getUserData().state === 'playing');
             if (activeBalls.length === 0 && ballsLeft <= 0) {
                 const readyBall = syncableObjects.find(o => o.type === 'ball' && o.body.getUserData().state === 'ready');
@@ -639,27 +587,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const p = obj.body.getPosition();
             const a = obj.body.getAngle();
             
-            // Mapping: Physics X -> 3D X, Physics Y -> 3D Z
             obj.mesh.position.x = p.x;
             obj.mesh.position.z = p.y;
             
             if (obj.type === 'ball') {
-                // Ball rolls: Calculate rotation axis based on velocity
                 const v = obj.body.getLinearVelocity();
-                // If moving in +Z (down), rotate around +X. If moving in +X (right), rotate around -Z?
-                // Simple approximation:
                 obj.mesh.rotation.x += v.y * 0.05;
                 obj.mesh.rotation.z -= v.x * 0.05;
-                obj.mesh.position.y = px2m(BALL_RADIUS_PX); // Sit on floor
+                obj.mesh.position.y = px2m(BALL_RADIUS_PX);
             } else {
-                // Standard Y-axis rotation (up axis in 3D) for walls/flippers
-                // Physics angle is counter-clockwise. Three.js Y rotation is counter-clockwise.
-                // However, we look from -Z or +Z. Usually necessitates a sign flip.
                 obj.mesh.rotation.y = -a; 
             }
         });
 
-        // Sync Flipper Meshes (Groups)
         function syncFlipper(f) {
             const p = f.body.getPosition();
             const a = f.body.getAngle();
@@ -680,7 +620,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const bVel = bBody.getLinearVelocity();
             
             if (bBody.getUserData().state === 'playing' && bPos.y < flipperY && bVel.y > 0.5) {
-                // Simple prediction
                 const timeToIntersect = (flipperY - bPos.y) / bVel.y;
                 if (timeToIntersect < 0.15) {
                     const mid = px2m(PLAYFIELD_WIDTH_PX / 2);
@@ -793,8 +732,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if(type==='r') rightFlipper.active=false; 
             if(type==='fire' && gameState==='launch') { launcher.charging=false; launchBall(); }
         };
-        el.addEventListener('mousedown', start); el.addEventListener('touchstart', start);
-        el.addEventListener('mouseup', end); el.addEventListener('touchend', end);
+        if(el) {
+            el.addEventListener('mousedown', start); el.addEventListener('touchstart', start);
+            el.addEventListener('mouseup', end); el.addEventListener('touchend', end);
+        }
     };
     setupTouch('touch-left', 'l');
     setupTouch('touch-right', 'r');
