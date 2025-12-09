@@ -113,36 +113,54 @@ document.addEventListener('DOMContentLoaded', () => {
     const m2px = (m) => m * CONFIG.pixelsPerMeter;
 
     // --- Audio ---
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // Change 1: Add latencyHint to reduce audio buffer latency
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+    
     function unlockAudio() { if (audioCtx && audioCtx.state === 'suspended') { audioCtx.resume(); } }
     
     function playSound(type, volume = 0.3) {
         if (isMuted || !audioCtx) return;
+        
+        if (audioCtx.state === 'suspended') { audioCtx.resume(); }
+        
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.connect(gain);
         gain.connect(audioCtx.destination);
-        gain.gain.setValueAtTime(volume, audioCtx.currentTime);
-
+        
+        // Use precise hardware time
         const now = audioCtx.currentTime;
+        
+        // Set volume anchor immediately
+        gain.gain.setValueAtTime(volume, now);
+
         if (type === 'launch'){
-            osc.type = 'sine'; osc.frequency.setValueAtTime(200, now);
+            osc.type = 'sine'; 
+            osc.frequency.setValueAtTime(200, now);
             osc.frequency.linearRampToValueAtTime(800, now + 0.1);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
-            osc.start(now); osc.stop(now + 0.5);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+            // Change 2: Use 0 to start immediately rather than 'now' which might cause buffering if passed
+            osc.start(0); 
+            osc.stop(now + 0.5);
         } else if (type === 'bounce'){
-            osc.type = 'square'; osc.frequency.setValueAtTime(400 + Math.random()*200, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-            osc.start(now); osc.stop(now + 0.1);
+            osc.type = 'square'; 
+            osc.frequency.setValueAtTime(400 + Math.random()*200, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+            osc.start(0); 
+            osc.stop(now + 0.1);
         } else if (type === 'flipper'){
-            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(100, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-            osc.start(now); osc.stop(now + 0.1);
+            osc.type = 'sawtooth'; 
+            osc.frequency.setValueAtTime(100, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+            osc.start(0); 
+            osc.stop(now + 0.1);
         } else if (type === 'lose'){
-            osc.type = 'triangle'; osc.frequency.setValueAtTime(200, now);
+            osc.type = 'triangle'; 
+            osc.frequency.setValueAtTime(200, now);
             osc.frequency.linearRampToValueAtTime(50, now + 1.0);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 1.0);
-            osc.start(now); osc.stop(now + 1.0);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 1.0);
+            osc.start(0); 
+            osc.stop(now + 1.0);
         }
     }
 
