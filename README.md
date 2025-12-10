@@ -6,7 +6,7 @@
 **Planck.js** physics and **Three.js** 3D rendering.
 The project combines realistic ball dynamics, flippers, bumpers, lights,
 shadows, and a full UI system with buttons, scoring, game over logic,
-touch controls, bot mode, and light/dark themes.
+touch controls and bot mode.
 
 ------------------------------------------------------------------------
 
