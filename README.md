@@ -10,6 +10,8 @@ touch controls and bot mode.
 
 ------------------------------------------------------------------------
 
+![screenshot](screenshots/game_1.png)
+
 ## 🚀 Features
 
 ### 🧱 Physics & Gameplay
