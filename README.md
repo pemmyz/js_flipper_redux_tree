@@ -8,6 +8,8 @@ The project combines realistic ball dynamics, flippers, bumpers, lights,
 shadows, and a full UI system with buttons, scoring, game over logic,
 touch controls and bot mode.
 
+## Play it now: https://pemmyz.github.io/js_flipper_redux_tree/
+
 ------------------------------------------------------------------------
 
 ![screenshot](screenshots/game_1.png)
