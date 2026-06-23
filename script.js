@@ -27,7 +27,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Camera Setup for 2.5D View
     const aspect = CONFIG.canvasWidth / CONFIG.canvasHeight;
-    const viewSize = 30; // Vertical field of view in world units
     const camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 1000);
     
     const midX = (CONFIG.canvasWidth / CONFIG.pixelsPerMeter) / 2;
@@ -78,6 +77,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const helpToggleButton = document.getElementById('help-toggle-button');
     const themeToggleButton = document.getElementById('theme-toggle-button');
     const botStatusText = document.getElementById('bot-status-text');
+    const gameContainerElement = document.getElementById('game-container');
+    const mobileToggleBtn = document.getElementById('mobile-btn');
 
     // --- Game State ---
     let score = 0;
@@ -105,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let rightFlipper = {};
     
     // Arrays to track sync
-    let syncableObjects = []; // { body, mesh, type }
+    let syncableObjects = [];
     let ballsToRemove = [];
 
     // --- Helpers ---
@@ -113,14 +114,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const m2px = (m) => m * CONFIG.pixelsPerMeter;
 
     // --- Audio ---
-    // Change 1: Add latencyHint to reduce audio buffer latency
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
-    
     function unlockAudio() { if (audioCtx && audioCtx.state === 'suspended') { audioCtx.resume(); } }
     
     function playSound(type, volume = 0.3) {
         if (isMuted || !audioCtx) return;
-        
         if (audioCtx.state === 'suspended') { audioCtx.resume(); }
         
         const osc = audioCtx.createOscillator();
@@ -128,10 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
         osc.connect(gain);
         gain.connect(audioCtx.destination);
         
-        // Use precise hardware time
         const now = audioCtx.currentTime;
-        
-        // Set volume anchor immediately
         gain.gain.setValueAtTime(volume, now);
 
         if (type === 'launch'){
@@ -139,7 +134,6 @@ document.addEventListener('DOMContentLoaded', () => {
             osc.frequency.setValueAtTime(200, now);
             osc.frequency.linearRampToValueAtTime(800, now + 0.1);
             gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
-            // Change 2: Use 0 to start immediately rather than 'now' which might cause buffering if passed
             osc.start(0); 
             osc.stop(now + 0.5);
         } else if (type === 'bounce'){
@@ -165,20 +159,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- 3D Helper Functions ---
-    function create3DMesh(geometry, color, x, z, y = 0, castShadow = true) {
-        const material = new THREE.MeshStandardMaterial({ 
-            color: color, 
-            roughness: 0.4, 
-            metalness: 0.6 
-        });
-        const mesh = new THREE.Mesh(geometry, material);
-        mesh.position.set(x, y, z);
-        if (castShadow) mesh.castShadow = true;
-        mesh.receiveShadow = true;
-        scene.add(mesh);
-        return mesh;
-    }
-
     function cleanupScene() {
         for (let i = scene.children.length - 1; i >= 0; i--) {
             const child = scene.children[i];
@@ -235,7 +215,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Physics & 3D Objects ---
-
     function createFieldBoundaries() {
         const wallHeight = 2;
         const wallMat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.wall, emissive: 0x0044aa, emissiveIntensity: 0.2 });
@@ -251,20 +230,15 @@ document.addEventListener('DOMContentLoaded', () => {
             scene.add(mesh);
         }
 
-        // Left Wall
         addWall(0, px2m(CONFIG.canvasHeight/2), px2m(20), px2m(CONFIG.canvasHeight));
-        // Top Wall
         addWall(px2m(CONFIG.canvasWidth/2), 0, px2m(CONFIG.canvasWidth), px2m(20));
-        // Right Wall
         addWall(px2m(CONFIG.canvasWidth), px2m(CONFIG.canvasHeight/2), px2m(20), px2m(CONFIG.canvasHeight));
         
-        // Chute Separator
         const sepX = px2m(PLAYFIELD_WIDTH_PX);
         const sepH = px2m(CONFIG.canvasHeight - 100); 
         const sepY = px2m(100) + sepH/2;
         addWall(sepX, sepY, 0.2, sepH);
 
-        // Guide Ramp
         const rampBody = world.createBody();
         const p1 = Vec2(px2m(CONFIG.canvasWidth), px2m(80));
         const p2 = Vec2(px2m(PLAYFIELD_WIDTH_PX - 40), 0);
@@ -280,30 +254,24 @@ document.addEventListener('DOMContentLoaded', () => {
         rampMesh.rotation.y = -rampAngle;
         scene.add(rampMesh);
 
-        // Drain Sensor
         const drain = world.createBody();
         drain.createFixture(pl.Box(px2m(PLAYFIELD_WIDTH_PX/2), px2m(10), Vec2(px2m(PLAYFIELD_WIDTH_PX/2), px2m(CONFIG.canvasHeight + 10)), 0), { isSensor: true });
         drain.setUserData({ type: 'drain' });
     }
 
     function createComplexFeatures() {
-        // 1. Spinning Cross in the center
         const spinnerX = px2m(PLAYFIELD_WIDTH_PX / 2);
-        // Move down by its width (1.5 * 2 = 3.0 meters)
         const spinnerY = px2m(300) + 3.0; 
         
-        // Enable angular damping so it slows down, remove initial angular velocity
         const spinnerBody = world.createDynamicBody({
             position: Vec2(spinnerX, spinnerY),
             angularDamping: 0.3
         });
 
-        // Reduced density (50 -> 2) so ball collision transfers enough energy to spin it
         spinnerBody.createFixture(pl.Box(1.5, 0.2), { density: 2.0, restitution: 1.2 });
         spinnerBody.createFixture(pl.Box(0.2, 1.5), { density: 2.0, restitution: 1.2 });
         spinnerBody.setUserData({ type: 'bumper', points: 100 });
 
-        // 3D Visual
         const spinnerGroup = new THREE.Group();
         const bar1 = new THREE.Mesh(new THREE.BoxGeometry(3, 0.5, 0.4), new THREE.MeshStandardMaterial({ color: CONFIG.colors.obstacle }));
         const bar2 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 3), new THREE.MeshStandardMaterial({ color: CONFIG.colors.obstacle }));
@@ -312,16 +280,14 @@ document.addEventListener('DOMContentLoaded', () => {
         spinnerGroup.position.set(spinnerX, 0.25, spinnerY);
         scene.add(spinnerGroup);
         
-        // Joint to hold it in place but let it spin
         const anchor = world.createBody(Vec2(spinnerX, spinnerY));
         world.createJoint(pl.RevoluteJoint({
-            enableMotor: false, // Disable motor for free spinning on physics hit
+            enableMotor: false, 
             enableLimit: false
         }, anchor, spinnerBody, Vec2(spinnerX, spinnerY)));
 
         syncableObjects.push({ body: spinnerBody, mesh: spinnerGroup, type: 'spinner' });
 
-        // 2. Triangle Prisms
         function createPrism(x, y) {
             const body = world.createBody(Vec2(x, y));
             body.createFixture(pl.Polygon([Vec2(0, -0.8), Vec2(0.7, 0.5), Vec2(-0.7, 0.5)]), { restitution: 1.5 });
@@ -671,7 +637,6 @@ document.addEventListener('DOMContentLoaded', () => {
         helpLegend.classList.toggle('hidden'); 
     }
 
-    // Bot Mode Utils
     function startBotCountdown() {
         if (!botStatusText) return; 
         let countdown = 5;
@@ -734,30 +699,39 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Touch
+    // Mobile / Touch Overlay Control Setup
     const setupTouch = (id, type) => {
         const el = document.getElementById(id);
+        if(!el) return;
+        
         const start = (e) => { 
-            e.preventDefault(); unlockAudio(); 
+            if(e.cancelable) e.preventDefault(); 
+            unlockAudio(); 
             if(botModeActive) cancelBotMode();
-            if(type==='l') leftFlipper.active=true; 
-            if(type==='r') rightFlipper.active=true; 
-            if(type==='fire' && gameState==='launch') launcher.charging=true; 
+            if(type === 'l') leftFlipper.active = true; 
+            if(type === 'r') rightFlipper.active = true; 
+            if(type === 'fire' && gameState === 'launch') launcher.charging = true; 
         };
         const end = (e) => { 
-            e.preventDefault();
-            if(type==='l') leftFlipper.active=false; 
-            if(type==='r') rightFlipper.active=false; 
-            if(type==='fire' && gameState==='launch') { launcher.charging=false; launchBall(); }
+            if(e.cancelable) e.preventDefault();
+            if(type === 'l') leftFlipper.active = false; 
+            if(type === 'r') rightFlipper.active = false; 
+            if(type === 'fire' && gameState === 'launch' && launcher.charging) { 
+                launcher.charging = false; launchBall(); 
+            }
         };
-        if(el) {
-            el.addEventListener('mousedown', start); el.addEventListener('touchstart', start);
-            el.addEventListener('mouseup', end); el.addEventListener('touchend', end);
-        }
+        
+        el.addEventListener('mousedown', start);
+        el.addEventListener('touchstart', start, { passive: false });
+        el.addEventListener('mouseup', end);
+        el.addEventListener('touchend', end, { passive: false });
+        el.addEventListener('touchcancel', end, { passive: false });
+        el.addEventListener('mouseleave', (e) => { if (e.buttons === 1) end(e); });
     };
-    setupTouch('touch-left', 'l');
-    setupTouch('touch-right', 'r');
-    setupTouch('touch-launch', 'fire');
+
+    setupTouch('mobile-left', 'l');
+    setupTouch('mobile-right', 'r');
+    setupTouch('mobile-up', 'fire');
 
     // UI Buttons
     restartButton.addEventListener('click', initializeGame);
@@ -769,12 +743,44 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.classList.toggle('light-mode');
         const isLight = document.body.classList.contains('light-mode');
         themeToggleButton.textContent = isLight ? 'Dark Mode' : 'Light Mode';
-        // Adjust ambient light for theme
         ambientLight.intensity = isLight ? 0.8 : 0.4;
         scene.background = new THREE.Color(isLight ? 0xe0e0e0 : 0x000000);
     });
 
-    // Start
+    // --- FULLSCREEN & MOBILE SCALING LOGIC ---
+    function scaleGame() {
+        const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
+        if (isFullscreen) {
+            const scale = Math.min(
+                window.innerWidth / CONFIG.canvasWidth,
+                window.innerHeight / CONFIG.canvasHeight
+            );
+            
+            gameContainerElement.style.transform = `scale(${scale})`;
+            document.body.classList.add('mobile-mode'); // Activates CSS lock
+        } else {
+            gameContainerElement.style.transform = 'none'; 
+            document.body.classList.remove('mobile-mode');
+        }
+    }
+
+    function goFull() {
+        const el = document.documentElement;
+        if (el.requestFullscreen) el.requestFullscreen();
+        else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    }
+
+    window.addEventListener("resize", scaleGame);
+    window.addEventListener("fullscreenchange", scaleGame);
+    window.addEventListener("webkitfullscreenchange", scaleGame);
+    
+    // Initial check
+    scaleGame();
+    
+    // Button Listener for Fullscreen Mode
+    if(mobileToggleBtn) mobileToggleBtn.addEventListener('click', goFull);
+
+    // Start Everything
     initializeGame();
     toggleHelp();
     animate();

@@ -4,6 +4,7 @@
     box-sizing: border-box;
 }
 
+/* ROOT & BODY SETUP */
 body {
     background-color: #1a1a1a;
     color: #fff;
@@ -12,19 +13,36 @@ body {
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    overflow: hidden;
+    width: 100vw;
+    overflow: auto; /* Default scroll behavior */
     transition: background-color 0.3s ease;
 }
 
+/* --- MOBILE MODE LOCK --- */
+/* Applied by JS when fullscreen is active */
+body.mobile-mode {
+    overflow: hidden; /* Disables scrollbars */
+    touch-action: none; /* Disables browser gestures */
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+}
+
+/* --- THE SCREEN (Fixed Internal Resolution) --- */
 #game-container {
     position: relative;
-    width: 600px;
-    height: 1000px;
+    width: 600px; /* Base Width */
+    height: 1000px; /* Base Height */
     background-color: #000;
-    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    box-shadow: 0 0 50px rgba(0,0,0,0.8);
     display: flex;
     flex-direction: column;
-    overflow: visible; 
+    overflow: hidden;
+    /* Important for scaling from the middle */
+    transform-origin: center center;
+    flex-shrink: 0;
 }
 
 #canvas-wrapper {
@@ -102,16 +120,34 @@ canvas {
     box-shadow: 0 0 10px #00d2ff;
 }
 
-#theme-toggle-button {
+/* --- TOGGLE BUTTONS --- */
+#theme-toggle-button, #mobile-btn {
     position: fixed;
-    top: 15px;
-    right: 15px;
-    z-index: 50;
+    z-index: 2000;
     padding: 8px 15px;
     background-color: #333;
     color: #fff;
     border: 1px solid #555;
     cursor: pointer;
+    font-family: 'Courier New', Courier, monospace;
+    text-transform: uppercase;
+    font-size: 12px;
+}
+
+#theme-toggle-button {
+    top: 15px;
+    right: 15px;
+}
+
+#mobile-btn {
+    top: 15px;
+    left: 15px;
+    border: 2px solid white;
+}
+
+/* Hide the fullscreen button when in mobile mode */
+body.mobile-mode #mobile-btn { 
+    display: none; 
 }
 
 #game-over-screen {
@@ -180,28 +216,57 @@ canvas {
     font-weight: bold;
 }
 
-.touch-button {
-    position: absolute;
-    width: 70px;
-    height: 70px;
-    background-color: rgba(255, 255, 255, 0.1);
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-radius: 50%;
-    z-index: 100;
-    cursor: pointer;
-    color: white;
-    font-size: 2em;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    user-select: none;
-    backdrop-filter: blur(2px);
+/* --- MOBILE CONTROLS OVERLAY --- */
+#mobile-controls {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; /* Let clicks pass through to empty space */
+    z-index: 3000;
+    display: none; /* Hidden by default */
+    justify-content: space-between;
+    align-items: flex-end;
+    padding: 20px;
+    box-sizing: border-box;
 }
-.touch-button:active { background-color: rgba(0, 210, 255, 0.4); border-color: #00d2ff; }
 
-#touch-left { left: -85px; bottom: 20px; }
-#touch-right { right: -85px; bottom: 20px; }
-#touch-launch { right: -85px; bottom: 100px; }
+/* Show controls only when in mobile mode */
+body.mobile-mode #mobile-controls {
+    display: flex;
+}
+
+/* --- CONTROL BUTTONS --- */
+.mobile-control-btn {
+    pointer-events: auto; /* Re-enable clicks for buttons */
+    width: 90px; height: 90px;
+    background: rgba(255,255,255,0.15);
+    border: 3px solid rgba(255,255,255,0.4);
+    border-radius: 50%;
+    color: white;
+    font-size: 40px;
+    display: flex; justify-content: center; align-items: center;
+    user-select: none;
+    backdrop-filter: blur(4px);
+    margin-bottom: 20px;
+    transition: transform 0.1s, background 0.1s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-control-btn:active {
+    background: rgba(255,255,255,0.4);
+    transform: scale(0.95);
+}
+
+#mobile-dpad {
+    display: flex;
+    gap: 15px; /* Spacing between Left/Right */
+    margin-left: 20px;
+    margin-bottom: 20px;
+}
+
+#mobile-action {
+    margin-right: 20px;
+    margin-bottom: 20px;
+}
 
 /* Light Mode Styles */
 body.light-mode { background-color: #e0e0e0; color: #111; }
