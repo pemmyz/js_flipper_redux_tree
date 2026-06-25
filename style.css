@@ -33,7 +33,7 @@ body.mobile-mode {
 /* --- THE SCREEN (Fixed Internal Resolution) --- */
 #game-container {
     position: relative;
-    width: 600px; /* Base Width */
+    width: 800px; /* Widened from 600px to comfortably fit the bottom horizontally */
     height: 1000px; /* Base Height */
     background-color: #000;
     box-shadow: 0 0 50px rgba(0,0,0,0.8);
@@ -67,7 +67,7 @@ canvas {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 20px;
+    padding: 10px 40px; /* slightly more padding for the wider screen */
     background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.6) 80%, rgba(0,0,0,0) 100%);
     pointer-events: none;
 }

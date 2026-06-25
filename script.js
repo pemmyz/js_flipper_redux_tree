@@ -2,8 +2,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Configuration ---
     const CONFIG = {
         pixelsPerMeter: 30, // Physics scale
-        canvasWidth: 600,
-        canvasHeight: 1000,
+        windowWidth: 800,   // Canvas View Width
+        windowHeight: 1000, // Canvas View Height
+        boardWidth: 600,    // Physics Table Width 
+        boardHeight: 1000,  // Physics Table Height
         gravity: 15,
         colors: {
             floor: 0x222222,
@@ -26,17 +28,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const scene = new THREE.Scene();
     
     // Camera Setup for 2.5D View
-    const aspect = CONFIG.canvasWidth / CONFIG.canvasHeight;
-    const camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 1000);
+    const aspect = CONFIG.windowWidth / CONFIG.windowHeight;
     
-    const midX = (CONFIG.canvasWidth / CONFIG.pixelsPerMeter) / 2;
-    const midZ = (CONFIG.canvasHeight / CONFIG.pixelsPerMeter) / 2;
+    // Increased FOV from 30 to 34 to zoom out slightly
+    const camera = new THREE.PerspectiveCamera(34, aspect, 0.1, 1000);
     
-    camera.position.set(midX, 45, midZ + 30); 
-    camera.lookAt(midX, 0, midZ);
+    const midX = (CONFIG.boardWidth / CONFIG.pixelsPerMeter) / 2;
+    const midZ = (CONFIG.boardHeight / CONFIG.pixelsPerMeter) / 2;
+    
+    // Lifted camera up (y: 48) and slightly further back (z: midZ + 32)
+    camera.position.set(midX, 48, midZ + 32); 
+    
+    // Adjusted lookAt target to shift the board lower on the screen (away from the top UI bar)
+    camera.lookAt(midX, 0, midZ + 1.5);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize(CONFIG.canvasWidth, CONFIG.canvasHeight);
+    renderer.setSize(CONFIG.windowWidth, CONFIG.windowHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(renderer.domElement);
@@ -97,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const BALL_RADIUS_PX = 10;
     const CHUTE_WIDTH_PX = 50;
-    const PLAYFIELD_WIDTH_PX = CONFIG.canvasWidth - CHUTE_WIDTH_PX;
+    const PLAYFIELD_WIDTH_PX = CONFIG.boardWidth - CHUTE_WIDTH_PX;
     
     // Physics Logic Variables
     let flipperGapBetweenTips = (BALL_RADIUS_PX * 2 + 5) + (BALL_RADIUS_PX / 2);
@@ -171,7 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function createFloor() {
-        const floorGeo = new THREE.PlaneGeometry(px2m(CONFIG.canvasWidth), px2m(CONFIG.canvasHeight));
+        const floorGeo = new THREE.PlaneGeometry(px2m(CONFIG.boardWidth) * 3, px2m(CONFIG.boardHeight) * 1.1);
         const floorMat = new THREE.MeshStandardMaterial({ 
             color: CONFIG.colors.floor, 
             roughness: 0.8,
@@ -230,17 +237,17 @@ document.addEventListener('DOMContentLoaded', () => {
             scene.add(mesh);
         }
 
-        addWall(0, px2m(CONFIG.canvasHeight/2), px2m(20), px2m(CONFIG.canvasHeight));
-        addWall(px2m(CONFIG.canvasWidth/2), 0, px2m(CONFIG.canvasWidth), px2m(20));
-        addWall(px2m(CONFIG.canvasWidth), px2m(CONFIG.canvasHeight/2), px2m(20), px2m(CONFIG.canvasHeight));
+        addWall(0, px2m(CONFIG.boardHeight/2), px2m(20), px2m(CONFIG.boardHeight));
+        addWall(px2m(CONFIG.boardWidth/2), 0, px2m(CONFIG.boardWidth), px2m(20));
+        addWall(px2m(CONFIG.boardWidth), px2m(CONFIG.boardHeight/2), px2m(20), px2m(CONFIG.boardHeight));
         
         const sepX = px2m(PLAYFIELD_WIDTH_PX);
-        const sepH = px2m(CONFIG.canvasHeight - 100); 
+        const sepH = px2m(CONFIG.boardHeight - 100); 
         const sepY = px2m(100) + sepH/2;
         addWall(sepX, sepY, 0.2, sepH);
 
         const rampBody = world.createBody();
-        const p1 = Vec2(px2m(CONFIG.canvasWidth), px2m(80));
+        const p1 = Vec2(px2m(CONFIG.boardWidth), px2m(80));
         const p2 = Vec2(px2m(PLAYFIELD_WIDTH_PX - 40), 0);
         rampBody.createFixture(pl.Edge(p1, p2), { restitution: 0.2 });
         
@@ -255,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
         scene.add(rampMesh);
 
         const drain = world.createBody();
-        drain.createFixture(pl.Box(px2m(PLAYFIELD_WIDTH_PX/2), px2m(10), Vec2(px2m(PLAYFIELD_WIDTH_PX/2), px2m(CONFIG.canvasHeight + 10)), 0), { isSensor: true });
+        drain.createFixture(pl.Box(px2m(PLAYFIELD_WIDTH_PX/2), px2m(10), Vec2(px2m(PLAYFIELD_WIDTH_PX/2), px2m(CONFIG.boardHeight + 10)), 0), { isSensor: true });
         drain.setUserData({ type: 'drain' });
     }
 
@@ -352,7 +359,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const flipperLength = 85;
         const flipperWidth = 15;
-        const flipperY = CONFIG.canvasHeight - 60;
+        const flipperY = CONFIG.boardHeight - 60;
         
         const flipperRestAngle = Math.PI / 8;
         const flipperTotalSpan = (2 * flipperLength * Math.cos(flipperRestAngle)) + flipperGapBetweenTips;
@@ -404,7 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function createSlopes(lx, rx, fy) {
-        const startY = px2m(CONFIG.canvasHeight * 0.6);
+        const startY = px2m(CONFIG.boardHeight * 0.6);
         const endY = px2m(fy);
         const lEndX = px2m(lx);
         const rEndX = px2m(rx);
@@ -434,9 +441,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function createLauncher() {
         launcher = { 
             x: px2m(PLAYFIELD_WIDTH_PX + CHUTE_WIDTH_PX/2), 
-            y: px2m(CONFIG.canvasHeight - 30), 
+            y: px2m(CONFIG.boardHeight - 30), 
             power: 0, maxPower: 60, charging: false,
-            baseY: px2m(CONFIG.canvasHeight - 30)
+            baseY: px2m(CONFIG.boardHeight - 30)
         };
         
         const geo = new THREE.BoxGeometry(px2m(20), 0.5, px2m(50));
@@ -752,8 +759,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
         if (isFullscreen) {
             const scale = Math.min(
-                window.innerWidth / CONFIG.canvasWidth,
-                window.innerHeight / CONFIG.canvasHeight
+                window.innerWidth / CONFIG.windowWidth,
+                window.innerHeight / CONFIG.windowHeight
             );
             
             gameContainerElement.style.transform = `scale(${scale})`;
